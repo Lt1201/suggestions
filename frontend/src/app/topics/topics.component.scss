@@ -1,0 +1,35 @@
+:host {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.topic-list {
+    width: 50%;
+    flex-grow: 1;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+}
+
+.topic-card {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.create-topic {
+    width: 100%;
+    height: 7rem;
+    display: flex;
+
+    .create-card {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        gap: 2rem;
+    }
+}
