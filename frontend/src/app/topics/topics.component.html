@@ -3,7 +3,11 @@
     <mat-card class="topic-card">
         <mat-list>
             @for (topic of topics; track topic.name) {
-                <mat-list-item><span matTooltip="{{topic.description}}">{{topic.name}}</span></mat-list-item>
+                <mat-list-item>
+                    <a routerLink="/topics/{{topic.id}}" [state]="topic" routerLinkActive="active" ariaCurrentWhenActive="page" matTooltip="{{topic.description}}">
+                        {{topic.name}}
+                    </a>
+                </mat-list-item>
                 <mat-divider></mat-divider>
             }
         </mat-list>

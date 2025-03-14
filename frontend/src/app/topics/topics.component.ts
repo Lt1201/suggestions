@@ -8,6 +8,7 @@ import {MatInputModule} from '@angular/material/input';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import { MatButtonModule } from '@angular/material/button';
 import { FormsModule } from '@angular/forms';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 
 interface Topic {
   name: string;
@@ -17,7 +18,7 @@ interface Topic {
 
 @Component({
   selector: 'app-topics',
-  imports: [MatListModule, MatTooltipModule, MatCardModule, MatInputModule, MatSelectModule, MatFormFieldModule, MatButtonModule, FormsModule],
+  imports: [MatListModule, MatTooltipModule, MatCardModule, MatInputModule, MatSelectModule, MatFormFieldModule, MatButtonModule, FormsModule, RouterLink, RouterLinkActive],
   templateUrl: './topics.component.html',
   styleUrl: './topics.component.scss'
 })

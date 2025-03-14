@@ -1,0 +1,64 @@
+@if (isLoading) {
+    <mat-spinner></mat-spinner>
+} @else {
+    <a routerLink="/topics">Back</a>
+    <div class="topic-header">
+        <h1>{{topic.name}}</h1>
+    </div>
+    <div class="category-list">
+        @for (category of categories; track category.id){
+            <mat-card class="category-card">
+                <mat-card-title class="card-title">{{category.name}}</mat-card-title>
+                <div class="table-container">
+                    <table mat-table [dataSource]="category.suggestions" #tables [id]="category.id">
+                        <!-- Content Column -->
+                        <ng-container matColumnDef="content">
+                            <th mat-header-cell *matHeaderCellDef> Suggestion </th>
+                            <td mat-cell *matCellDef="let element"> {{element.content}} </td>
+                        </ng-container>
+
+                        <!-- Name Column -->
+                        <ng-container matColumnDef="name">
+                            <th mat-header-cell *matHeaderCellDef> by: </th>
+                            <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                        </ng-container>
+        
+        
+                        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+                        <tr class="mat-row" *matNoDataRow>
+                            <td class="mat-cell" colspan="4">No suggestions for this category</td>
+                        </tr>
+                    </table>
+                </div>
+            </mat-card>
+        }
+        <mat-card class="category-card create-category-card">
+            <mat-card-title>New Category</mat-card-title>
+            <mat-form-field appearance="outline">
+                <input matInput placeholder="Category Name" [(ngModel)]="newCategoryName">
+            </mat-form-field>
+            <button mat-raised-button color="primary" (click)="createCategory()" [disabled]="categoryDisabled()">Create Category</button>
+        </mat-card>
+    </div>
+    <div class="create-suggestion">
+        <mat-card class="create-card">
+            <mat-form-field appearance="outline">
+                <mat-label>Select</mat-label>
+                <mat-select [(ngModel)]="newSuggestionCategoryId">
+                    @for (category of categories; track category.id) {
+                        <mat-option [value]="category.id">{{category.name}}</mat-option>
+                    }
+                </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+                <input matInput placeholder="Suggestion message" [(ngModel)]="newSuggestionContent">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+                <input matInput placeholder="Your name" [(ngModel)]="newSuggestionName">
+            </mat-form-field>
+            <button mat-raised-button color="primary" (click)="createSuggestion()" [disabled]="suggestionDisabled()">Create Suggestion</button>
+        </mat-card>
+    </div>
+}
+

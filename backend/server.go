@@ -33,19 +33,30 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type Topic struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Id          int    `json:"id"`
+	Id          *int    `json:"id"`
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+}
+
+type Category struct {
+	Id          *int         `json:"id"`
+	Name        *string      `json:"name"`
+	TopicId     *int         `json:"topicId"`
+	Suggestions []Suggestion `json:"suggestions"`
 }
 
 type Suggestion struct {
-	Name    string `json:"name"`
-	Content string `json:"content"`
-	Id      int    `json:"id"`
-	TopicId int    `json:"topicId"`
+	Id         *int    `json:"id"`
+	Name       *string `json:"name"`
+	Content    *string `json:"content"`
+	CategoryId *int    `json:"categoryId"`
 }
 
-var suggestions []Suggestion
+type TopicResponse struct {
+	Topic      Topic      `json:"topic"`
+	Categories []Category `json:"categories"`
+}
+
 var db *sql.DB
 
 func main() {
@@ -70,19 +81,15 @@ func main() {
 	// initialize router
 	router := mux.NewRouter()
 
-	var newSuggestion Suggestion = Suggestion{
-		Name:    "Test Name",
-		Content: "Test Content",
-		Id:      1,
-		TopicId: 1,
-	}
-	suggestions = append(suggestions, newSuggestion)
-
 	apiRouter := router.PathPrefix("/api").Subrouter()
-	// topic related routes
+	// fetch topic
 	apiRouter.HandleFunc("/topic", getTopics).Methods("GET")
-	apiRouter.HandleFunc("/topic/{topicName}", getSuggestionsForTopic).Methods("GET")
+	apiRouter.HandleFunc("/topic/{topicID}", getSuggestionsForTopic).Methods("GET")
+
+	// post routes
 	apiRouter.HandleFunc("/topic", createTopic).Methods("POST")
+	apiRouter.HandleFunc("/category", createCategory).Methods("POST")
+	apiRouter.HandleFunc("/suggestion", createSuggestion).Methods("POST")
 
 	// path for static files
 	spa := spaHandler{staticPath: "../frontend/dist/frontend/browser", indexPath: "index.html"}
@@ -116,8 +123,56 @@ func getTopics(w http.ResponseWriter, r *http.Request) {
 
 func getSuggestionsForTopic(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	log.Default().Println("GET /api/topic/" + params["topicName"])
-	json.NewEncoder(w).Encode(params["topicName"])
+	log.Default().Println("GET /api/topic/" + params["topicID"])
+	var topic Topic
+	var categories []Category
+	id := params["topicID"]
+	// get topic
+	row := db.QueryRow("select * from topics where id = ?", id)
+	err := row.Scan(&topic.Id, &topic.Name, &topic.Description)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// get categories and suggestions
+	rows, err := db.Query("select * from categories left join suggestions on suggestions.category_id = categories.id where topic_id = ?", id)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var category Category
+		category.Suggestions = []Suggestion{}
+		var suggestion Suggestion
+		err = rows.Scan(&category.Id, &category.Name, &category.TopicId, &suggestion.Id, &suggestion.Name, &suggestion.Content, &suggestion.CategoryId)
+		if err != nil {
+			log.Fatal(err)
+		}
+		var found = false
+		for i, c := range categories {
+			if *c.Id == *category.Id {
+				if suggestion.Content != nil {
+					categories[i].Suggestions = append(categories[i].Suggestions, suggestion)
+				}
+				log.Default().Println("Found category: " + *category.Name)
+				found = true
+				break
+			}
+		}
+		if !found {
+			if suggestion.Content != nil {
+				category.Suggestions = append(category.Suggestions, suggestion)
+			}
+			log.Default().Println("Adding category: " + *category.Name)
+			categories = append(categories, category)
+		}
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp := TopicResponse{Topic: topic, Categories: categories}
+	json.NewEncoder(w).Encode(resp)
 }
 
 func createTopic(w http.ResponseWriter, r *http.Request) {
@@ -151,4 +206,70 @@ func createTopic(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Default().Println("Committed transaction")
 	json.NewEncoder(w).Encode(newTopic)
+}
+
+func createCategory(w http.ResponseWriter, r *http.Request) {
+	var newCategory Category
+	_ = json.NewDecoder(r.Body).Decode(&newCategory)
+	// sqlite insert with brought in data
+	log.Default().Println("POST /api/category")
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Default().Println("Began transaction")
+	stmt, err := tx.Prepare("insert into categories(name, topic_id) values(?, ?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(newCategory.Name, newCategory.TopicId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Default().Println("Inserted topic")
+	row := tx.QueryRow("SELECT last_insert_rowid()")
+	err = row.Scan(&newCategory.Id)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = tx.Commit()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Default().Println("Committed transaction")
+	json.NewEncoder(w).Encode(newCategory)
+}
+
+func createSuggestion(w http.ResponseWriter, r *http.Request) {
+	var newSuggestion Suggestion
+	_ = json.NewDecoder(r.Body).Decode(&newSuggestion)
+	// sqlite insert with brought in data
+	log.Default().Println("POST /api/suggestion")
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Default().Println("Began transaction")
+	stmt, err := tx.Prepare("insert into suggestions(name, content, category_id) values(?, ?, ?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(newSuggestion.Name, newSuggestion.Content, newSuggestion.CategoryId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Default().Println("Inserted topic")
+	row := tx.QueryRow("SELECT last_insert_rowid()")
+	err = row.Scan(&newSuggestion.Id)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = tx.Commit()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Default().Println("Committed transaction")
+	json.NewEncoder(w).Encode(newSuggestion)
 }
