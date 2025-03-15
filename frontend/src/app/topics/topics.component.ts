@@ -8,6 +8,7 @@ import {MatInputModule} from '@angular/material/input';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import { MatButtonModule } from '@angular/material/button';
 import { FormsModule } from '@angular/forms';
+import { MatIconModule} from '@angular/material/icon';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 interface Topic {
@@ -18,7 +19,7 @@ interface Topic {
 
 @Component({
   selector: 'app-topics',
-  imports: [MatListModule, MatTooltipModule, MatCardModule, MatInputModule, MatSelectModule, MatFormFieldModule, MatButtonModule, FormsModule, RouterLink, RouterLinkActive],
+  imports: [MatListModule, MatTooltipModule, MatCardModule, MatInputModule, MatSelectModule, MatFormFieldModule, MatButtonModule, FormsModule, RouterLink, RouterLinkActive, MatIconModule],
   templateUrl: './topics.component.html',
   styleUrl: './topics.component.scss'
 })
@@ -31,6 +32,9 @@ export class TopicsComponent {
     http.get<Topic[]>('/api/topic').subscribe((topics) => {
       console.log(topics);
       this.topics = topics;
+      if (this.topics == null) {
+        this.topics = [];
+      }
     });
   }
 
@@ -41,6 +45,13 @@ export class TopicsComponent {
       description: this.newTopicDescription
     }).subscribe((topic) => {
       this.topics.push(topic);
+    });
+  }
+
+  deleteTopic(topic: Topic) {
+    console.log("Deleting topic", topic);
+    this.http.delete('/api/topic/'+topic.id).subscribe(() => {
+      this.topics = this.topics.filter((t) => t != topic);
     });
   }
 }

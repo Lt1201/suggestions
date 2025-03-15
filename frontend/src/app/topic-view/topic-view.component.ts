@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { FormsModule } from '@angular/forms';
 import { MatTable, MatTableModule } from '@angular/material/table';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
+import { MatIconModule} from '@angular/material/icon';
 import { RouterModule } from '@angular/router';
 
 interface suggestion {
@@ -38,7 +39,7 @@ interface TopicData {
 
 @Component({
   selector: 'app-topic-view',
-  imports: [MatTooltipModule, MatCardModule, MatInputModule, MatSelectModule, MatFormFieldModule, MatButtonModule, FormsModule, MatTableModule, MatProgressSpinnerModule, RouterModule],
+  imports: [MatTooltipModule, MatCardModule, MatInputModule, MatSelectModule, MatFormFieldModule, MatButtonModule, FormsModule, MatTableModule, MatProgressSpinnerModule, MatIconModule, RouterModule],
   templateUrl: './topic-view.component.html',
   styleUrl: './topic-view.component.scss'
 })
@@ -69,7 +70,7 @@ export class TopicViewComponent {
   newSuggestionName = "";
   newSuggestionContent = "";
 
-  displayedColumns= ['content', 'name'];
+  displayedColumns= ['content', 'name', 'actions'];
 
   constructor(private http: HttpClient) {
     this.topic = {
@@ -119,5 +120,27 @@ export class TopicViewComponent {
 
   categoryDisabled(){
     return this.newCategoryName == "";
+  }
+
+  deleteCategory(category: category) {
+    console.log("Deleting category", category.id);
+    this.http.delete('/api/category/'+category.id).subscribe(() => {
+      this.categories = this.categories.filter((cat) => cat.id != category.id);
+    });
+  }
+
+  deleteSuggestion(suggestion: suggestion) {
+    console.log("Deleting suggestion", suggestion.id);
+    this.http.delete('/api/suggestion/'+suggestion.id).subscribe(() => {
+      for (const category of this.categories) {
+        if (category.id == suggestion.categoryId) {
+          category.suggestions = category.suggestions.filter((catSuggestion) => catSuggestion.id != suggestion.id);
+          this.tables.forEach((table: MatTable<suggestion>) => {
+            table.renderRows();
+          });
+          break;
+        }
+      }
+    });
   }
 }

@@ -4,9 +4,14 @@
         <mat-list>
             @for (topic of topics; track topic.name) {
                 <mat-list-item>
-                    <a routerLink="/topics/{{topic.id}}" [state]="topic" routerLinkActive="active" ariaCurrentWhenActive="page" matTooltip="{{topic.description}}">
-                        {{topic.name}}
-                    </a>
+                    <div class="topic-item">
+                        <a routerLink="/topics/{{topic.id}}" [state]="topic" routerLinkActive="active" ariaCurrentWhenActive="page" matTooltip="{{topic.description}}">
+                            {{topic.name}}
+                        </a>
+                        <button mat-icon-button aria-label="delete topic" (click)="deleteTopic(topic)">
+                            <mat-icon>delete_forever</mat-icon>
+                        </button>
+                    </div>
                 </mat-list-item>
                 <mat-divider></mat-divider>
             }

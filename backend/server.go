@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
@@ -68,10 +69,17 @@ func main() {
 	db = dtb
 	defer db.Close()
 
+	pragStmt := `PRAGMA foreign_keys = ON;`
+	_, err = db.Exec(pragStmt)
+	if err != nil {
+		log.Printf("%q: %s\n", err, pragStmt)
+		return
+	}
+
 	sqlStmt := `
 	create table if not exists topics (id integer not null primary key autoincrement, name text, description text);
-	create table if not exists categories  (id integer not null primary key autoincrement, name text, topic_id integer, FOREIGN KEY(topic_id) REFERENCES topics(id));
-	create table if not exists suggestions (id integer not null primary key autoincrement, name text, content text, category_id integer, FOREIGN KEY(category_id) REFERENCES categories(id));`
+	create table if not exists categories  (id integer not null primary key autoincrement, name text, topic_id integer, FOREIGN KEY(topic_id) REFERENCES topics(id) ON DELETE CASCADE);
+	create table if not exists suggestions (id integer not null primary key autoincrement, name text, content text, category_id integer, FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE);`
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
 		log.Printf("%q: %s\n", err, sqlStmt)
@@ -90,6 +98,11 @@ func main() {
 	apiRouter.HandleFunc("/topic", createTopic).Methods("POST")
 	apiRouter.HandleFunc("/category", createCategory).Methods("POST")
 	apiRouter.HandleFunc("/suggestion", createSuggestion).Methods("POST")
+
+	// delete routes
+	apiRouter.HandleFunc("/topic/{topicID}", deleteTopic).Methods("DELETE")
+	apiRouter.HandleFunc("/category/{categoryID}", deleteCategory).Methods("DELETE")
+	apiRouter.HandleFunc("/suggestion/{suggestionID}", deleteSuggestion).Methods("DELETE")
 
 	// path for static files
 	spa := spaHandler{staticPath: "../frontend/dist/frontend/browser", indexPath: "index.html"}
@@ -272,4 +285,100 @@ func createSuggestion(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Default().Println("Committed transaction")
 	json.NewEncoder(w).Encode(newSuggestion)
+}
+
+func deleteTopic(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	topicID, err := strconv.Atoi(params["topicID"])
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	// sqlite insert with brought in data
+	log.Default().Println("DELETE /api/topic/" + params["topicID"])
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Default().Println("Began transaction")
+	stmt, err := tx.Prepare("delete from topics where id = (?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(topicID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Default().Println("delete topic")
+	err = tx.Commit()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Default().Println("Committed transaction")
+	json.NewEncoder(w).Encode(topicID)
+}
+
+func deleteCategory(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	categoryID, err := strconv.Atoi(params["categoryID"])
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	// sqlite insert with brought in data
+	log.Default().Println("DELETE /api/category/" + params["categoryID"])
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Default().Println("Began transaction")
+	stmt, err := tx.Prepare("delete from categories where id = (?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(categoryID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Default().Println("delete category")
+	err = tx.Commit()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Default().Println("Committed transaction")
+	json.NewEncoder(w).Encode(categoryID)
+}
+
+func deleteSuggestion(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	suggestionID, err := strconv.Atoi(params["suggestionID"])
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	// sqlite insert with brought in data
+	log.Default().Println("DELETE /api/suggestion/" + params["suggestionID"])
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Default().Println("Began transaction")
+	stmt, err := tx.Prepare("delete from suggestions where id = (?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(suggestionID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Default().Println("delete suggestion")
+	err = tx.Commit()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Default().Println("Committed transaction")
+	json.NewEncoder(w).Encode(suggestionID)
 }
