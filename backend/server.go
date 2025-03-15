@@ -61,8 +61,12 @@ type TopicResponse struct {
 var db *sql.DB
 
 func main() {
+	// read environment variables
+	dbPath := os.Getenv("SUGGESTION_DB_PATH")
+	staticDir := os.Getenv("SUGGESTION_FRONTEND_DIST_PATH")
+
 	// initialize db
-	dtb, err := sql.Open("sqlite3", "../build/suggestions.db")
+	dtb, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -105,7 +109,7 @@ func main() {
 	apiRouter.HandleFunc("/suggestion/{suggestionID}", deleteSuggestion).Methods("DELETE")
 
 	// path for static files
-	spa := spaHandler{staticPath: "../frontend/dist/frontend/browser", indexPath: "index.html"}
+	spa := spaHandler{staticPath: staticDir, indexPath: "index.html"}
 	router.PathPrefix("/").Handler(spa)
 
 	log.Fatal(http.ListenAndServe(":8080", router))
